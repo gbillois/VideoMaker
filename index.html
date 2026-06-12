@@ -183,10 +183,6 @@
           <div class="field"><label>Voix</label>
             <select id="set-voice">
               <option value="" selected>Auto (selon langue)</option>
-              <option value="fr-FR-HenriNeural">FR · Henri (h)</option>
-              <option value="fr-FR-DeniseNeural">FR · Denise (f)</option>
-              <option value="en-US-AndrewNeural">EN · Andrew (h)</option>
-              <option value="en-US-AriaNeural">EN · Aria (f)</option>
             </select></div>
         </div>
         <div class="row2">
@@ -443,6 +439,46 @@ $('ai-provider').addEventListener('change', () => {
 $('ai-key').addEventListener('change', fetchModels);
 fetchModels();
 
+/* ─────────── voix par langue (synchronisées avec le sélecteur) ─────────── */
+const VOICE_CHOICES = {
+  fr: [['fr-FR-HenriNeural','Henri (h)'],['fr-FR-DeniseNeural','Denise (f)'],
+       ['fr-FR-RemyMultilingualNeural','Rémy (h · multilingue)'],['fr-FR-VivienneMultilingualNeural','Vivienne (f · multilingue)']],
+  en: [['en-US-AndrewNeural','Andrew (m)'],['en-US-AriaNeural','Aria (f)'],
+       ['en-US-ChristopherNeural','Christopher (m)'],['en-GB-RyanNeural','Ryan (GB · m)'],['en-GB-SoniaNeural','Sonia (GB · f)']],
+  es: [['es-ES-AlvaroNeural','Álvaro (h)'],['es-ES-ElviraNeural','Elvira (f)'],['es-MX-JorgeNeural','Jorge (MX · h)']],
+  de: [['de-DE-ConradNeural','Conrad (m)'],['de-DE-KatjaNeural','Katja (w)']],
+  it: [['it-IT-DiegoNeural','Diego (u)'],['it-IT-ElsaNeural','Elsa (d)']],
+  pt: [['pt-BR-AntonioNeural','Antônio (h)'],['pt-BR-FranciscaNeural','Francisca (f)']],
+};
+function fillVoices(){
+  const sel = $('set-voice'), keep = sel.value;
+  sel.innerHTML = '';
+  const auto = document.createElement('option');
+  auto.value = ''; auto.textContent = 'Auto (selon langue)';
+  sel.appendChild(auto);
+  (VOICE_CHOICES[$('set-lang').value] || []).forEach(([v, label]) => {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = label;
+    sel.appendChild(o);
+  });
+  if ([...sel.options].some(o => o.value === keep)) sel.value = keep;
+}
+$('set-lang').addEventListener('change', fillVoices);
+fillVoices();
+
+/* ─────────── les réglages de l'étape 1 sont IMPOSÉS au projet généré ───────────
+   (même si l'IA dévie : style, langue, durée et voix font foi) */
+function enforceSettings(p){
+  p.meta = p.meta || {}; p.theme = p.theme || {};
+  p.audio = p.audio || {}; p.target = p.target || {};
+  p.meta.lang = $('set-lang').value;
+  p.theme.preset = $('set-theme').value;
+  p.target.duration = parseFloat($('set-duration').value) || 120;
+  const v = $('set-voice').value;
+  if (v) p.audio.voice = v; else delete p.audio.voice;
+  return p;
+}
+
 /* ═══════════════════ source material ═══════════════════ */
 $('btn-load-json').addEventListener('click', () => $('file-input').click());
 $('file-input').addEventListener('change', e => {
@@ -533,7 +569,7 @@ $('btn-generate').addEventListener('click', async () => {
     const raw = await callAI(SCHEMA_DOC, user);
     const json = raw.replace(/^```json?\s*/m, '').replace(/```\s*$/m, '');
     const p = JSON.parse(json.slice(json.indexOf('{'), json.lastIndexOf('}') + 1));
-    applyProject(p);
+    applyProject(enforceSettings(p));
     $('gen-status').innerHTML = '<span class="badge">Scénario généré</span> — passez à l’adaptation.';
     setStep(2);
   } catch (e) {
@@ -597,7 +633,7 @@ $('btn-skeleton').addEventListener('click', () => {
         title:(big.title||'').toUpperCase().slice(0,18), subtitle:'', brand:'' },
     ],
   };
-  applyProject(p);
+  applyProject(enforceSettings(p));
   $('gen-status').innerHTML = '<span class="badge">Gabarit créé</span> — rédigez les VO marquées '+todo;
   setStep(2);
 });
