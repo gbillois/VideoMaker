@@ -212,6 +212,7 @@
               <option value="none">Aucun (gabarit)</option>
               <option value="anthropic" selected>Claude (Anthropic)</option>
               <option value="openai">OpenAI</option>
+              <option value="openrouter">OpenRouter</option>
             </select></div>
           <div class="field"><label>Modèle
               <button class="mini-btn" id="btn-models" title="Rafraîchir la liste depuis l’API">⟳</button></label>
@@ -380,6 +381,7 @@ document.querySelectorAll('.step-btn').forEach(b => b.addEventListener('click', 
 const FALLBACK_MODELS = {
   anthropic: ['claude-fable-5', 'claude-opus-4-8', 'claude-sonnet-4-6', 'claude-haiku-4-5'],
   openai: ['gpt-4o', 'gpt-4o-mini'],
+  openrouter: ['openrouter/auto', '~openai/gpt-latest', 'anthropic/claude-sonnet-4.6'],
 };
 function fillModels(list, keep){
   const sel = $('ai-model');
@@ -414,11 +416,13 @@ async function fetchModels(){
       if (!r.ok) throw new Error('HTTP ' + r.status);
       ids = (await r.json()).data.map(m => m.id);
     } else {
-      const r = await fetch('https://api.openai.com/v1/models', {
+      const r = await fetch(provider === 'openrouter' ? 'https://openrouter.ai/api/v1/models' : 'https://api.openai.com/v1/models', {
         headers: { 'Authorization': 'Bearer ' + key } });
       if (!r.ok) throw new Error('HTTP ' + r.status);
-      ids = (await r.json()).data.map(m => m.id)
-        .filter(id => /^(gpt-|o\d|chatgpt)/.test(id)
+      ids = (await r.json()).data
+        .filter(m => provider !== 'openrouter' || !m.architecture?.output_modalities || m.architecture.output_modalities.includes('text'))
+        .map(m => m.id)
+        .filter(id => provider === 'openrouter' || /^(gpt-|o\d|chatgpt)/.test(id)
           && !/(audio|realtime|search|transcribe|tts|embed|image|moderation|instruct)/.test(id))
         .sort().reverse();
     }
@@ -543,13 +547,14 @@ async function callAI(systemPrompt, userPrompt){
     const d = await r.json();
     return d.content.map(c => c.text || '').join('');
   } else {
-    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+    const isOpenRouter = provider === 'openrouter';
+    const r = await fetch(isOpenRouter ? 'https://openrouter.ai/api/v1/chat/completions' : 'https://api.openai.com/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key, ...(isOpenRouter ? { 'HTTP-Referer': location.origin, 'X-OpenRouter-Title': 'VideoMaker' } : {}) },
       body: JSON.stringify({ model, response_format: { type: 'json_object' },
         messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }] }),
     });
-    if (!r.ok) throw new Error('OpenAI ' + r.status + ' : ' + (await r.text()).slice(0, 300));
+    if (!r.ok) throw new Error((isOpenRouter ? 'OpenRouter ' : 'OpenAI ') + r.status + ' : ' + (await r.text()).slice(0, 300));
     const d = await r.json();
     return d.choices[0].message.content;
   }
