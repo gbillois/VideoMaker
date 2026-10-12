@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="VideoMaker">
+  <defs><linearGradient id="vm-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5a33dc"/><stop offset="1" stop-color="#3a17a8"/></linearGradient></defs>
+  <rect x="2" y="2" width="96" height="96" rx="22" fill="url(#vm-bg)"/>
+  <rect x="2.75" y="2.75" width="94.5" height="94.5" rx="21.25" fill="none" stroke="#ffffff" stroke-opacity="0.28" stroke-width="1.5"/>
+  <path fill="#ffffff" d="M47.48 38.42 38.07 65.72H28.35L18.9 38.42H27.03L33.23 58.13L39.39 38.42Z M80.16 38.42V65.72H72.57V50.66L67.42 65.72H61.07L55.88 50.54V65.72H48.29V38.42H57.47L64.32 56.16L71.02 38.42Z"/>
+  <circle cx="80" cy="20" r="9.5" fill="#04f06a" fill-opacity="0.22"/>
+  <circle cx="80" cy="20" r="6" fill="#04f06a"/>
+</svg>

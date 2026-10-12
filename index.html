@@ -1,892 +1,396 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Video Debriefer — Studio</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg: #edf6f8; --surface: rgba(255,255,255,0.94); --surface-dark: #0b2f4a;
-    --text: #123047; --muted: #5d7384; --border: rgba(11,82,109,0.16);
-    --primary: #0f6d8f; --primary-strong: #0b2f4a; --accent: #30c38f;
-    --accent-soft: #def7ed; --danger: #d9485f;
-    --shadow-sm: 0 10px 28px rgba(11,47,74,0.10);
-    --radius: 18px; --radius-sm: 12px;
-    --ui: Inter, -apple-system, "Segoe UI", sans-serif;
-    --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
-  }
-  * { box-sizing: border-box; }
-  html, body { height: 100%; margin: 0; }
-  body {
-    font-family: var(--ui); color: var(--text); overflow: hidden;
-    background:
-      radial-gradient(circle at top right, rgba(48,195,143,0.18), transparent 24%),
-      radial-gradient(circle at top left, rgba(15,109,143,0.18), transparent 30%),
-      linear-gradient(180deg, #f8fcfd 0%, var(--bg) 240px);
-  }
-  button, input, select, textarea { font: inherit; color: inherit; }
-  button { cursor: pointer; }
-  .shell { display: flex; flex-direction: column; height: 100vh; }
-
-  .topbar {
-    min-height: 72px; flex-shrink: 0; z-index: 5; color: #fff;
-    background: linear-gradient(120deg, #0b2f4a 0%, #0f6d8f 58%, #30c38f 140%);
-    display: flex; align-items: center; gap: 16px; padding: 0 20px;
-    box-shadow: 0 14px 32px rgba(11,47,74,0.24);
-  }
-  .brand-mark {
-    width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center;
-    background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.18);
-    font-weight: 700; font-size: 17px; letter-spacing: -0.08em;
-  }
-  .brand-eyebrow { color: rgba(255,255,255,0.74); font-size: 0.67rem; font-weight: 700;
-                   letter-spacing: 0.16em; text-transform: uppercase; }
-  .brand-name { font-size: 1rem; font-weight: 700; }
-  .steps { margin-left: 32px; display: flex; gap: 6px; }
-  .step-btn {
-    border: 1px solid rgba(255,255,255,0.22); background: rgba(255,255,255,0.10);
-    color: rgba(255,255,255,0.85); border-radius: 999px; padding: 8px 18px;
-    font-size: 0.82rem; font-weight: 600;
-  }
-  .step-btn.active { background: #fff; color: var(--primary-strong); }
-  .server-pill {
-    margin-left: auto; display: flex; align-items: center; gap: 9px;
-    padding: 8px 12px; border-radius: 999px; font-size: 0.78rem; font-weight: 600;
-    background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.14);
-  }
-  .server-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--danger); }
-  .server-dot.on { background: var(--accent); box-shadow: 0 0 0 4px rgba(48,195,143,0.18); }
-
-  .workspace { display: grid; grid-template-columns: 440px minmax(0,1fr);
-               flex: 1; min-height: 0; padding: 18px; gap: 18px; }
-  .panel {
-    background: rgba(255,255,255,0.72); border: 1px solid rgba(15,109,143,0.10);
-    border-radius: var(--radius); box-shadow: var(--shadow-sm);
-    overflow-y: auto; padding: 18px; min-height: 0;
-  }
-  .preview-side { display: flex; flex-direction: column; min-height: 0; gap: 12px; }
-  .preview-frame {
-    flex: 1; min-height: 0; background: #0b0d12; border-radius: var(--radius);
-    box-shadow: var(--shadow-sm); overflow: hidden; position: relative;
-  }
-  .preview-frame iframe { width: 1920px; height: 1080px; border: 0;
-                          transform-origin: 0 0; position: absolute; }
-  .scrub-bar { display: flex; gap: 12px; align-items: center;
-               background: var(--surface); border-radius: var(--radius-sm);
-               padding: 10px 16px; box-shadow: var(--shadow-sm); }
-  .scrub-bar input[type=range] { flex: 1; }
-  .scrub-time { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); min-width: 96px; }
-  .play-btn { border: 0; background: var(--primary); color: #fff; border-radius: 8px;
-              width: 36px; height: 30px; font-size: 0.8rem; }
-
-  h3 { margin: 4px 0 10px; font-size: 0.85rem; text-transform: uppercase;
-       letter-spacing: 0.1em; color: var(--primary-strong); }
-  .field { margin-bottom: 12px; }
-  .field label { display: block; font-size: 0.75rem; font-weight: 600;
-                 color: var(--muted); margin-bottom: 4px; }
-  .field input[type=text], .field input[type=password], .field input[type=number],
-  .field select, .field textarea {
-    width: 100%; border: 1px solid var(--border); border-radius: 9px;
-    padding: 8px 10px; background: #fff; font-size: 0.85rem;
-  }
-  .field textarea { font-family: var(--mono); font-size: 0.76rem; resize: vertical; }
-  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-  .btn { border: 0; border-radius: 10px; padding: 10px 16px; font-weight: 600;
-         font-size: 0.85rem; background: #e8eef2; color: var(--primary-strong); }
-  .btn-primary { background: var(--primary); color: #fff; }
-  .btn-accent { background: var(--accent); color: #06342a; }
-  .btn-ghost { background: transparent; border: 1px dashed var(--border); }
-  .btn-danger { background: transparent; color: var(--danger); }
-  .btn:disabled { opacity: 0.5; cursor: default; }
-  .hint { font-size: 0.74rem; color: var(--muted); line-height: 1.5; margin: 6px 0 14px; }
-  .divider { border-top: 1px solid var(--border); margin: 18px 0; }
-  .badge { display: inline-block; padding: 3px 10px; border-radius: 999px;
-           background: var(--accent-soft); color: #0a6c4e; font-size: 0.72rem; font-weight: 700; }
-  .badge.warn { background: #fdecec; color: var(--danger); }
-
-  .scene-card { border: 1px solid var(--border); border-radius: var(--radius-sm);
-                background: #fff; margin-bottom: 10px; overflow: hidden; }
-  .scene-card > header { display: flex; align-items: center; gap: 8px;
-                         padding: 10px 12px; cursor: pointer; }
-  .scene-type { font-family: var(--mono); font-size: 0.68rem; padding: 3px 8px;
-                background: var(--surface-dark); color: #fff; border-radius: 6px; }
-  .scene-title { font-weight: 600; font-size: 0.84rem; flex: 1; overflow: hidden;
-                 text-overflow: ellipsis; white-space: nowrap; }
-  .scene-dur { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); }
-  .scene-body { padding: 0 12px 12px; border-top: 1px solid var(--border); }
-  .mini-btn { border: 0; background: transparent; font-size: 0.85rem; padding: 2px 5px; color: var(--muted); }
-  .progress-wrap { background: #e8eef2; border-radius: 8px; height: 14px; overflow: hidden; }
-  .progress-bar { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent));
-                  width: 0; transition: width 0.4s; }
-  .log-box { font-family: var(--mono); font-size: 0.7rem; background: #0b2f4a; color: #cde9e0;
-             border-radius: 9px; padding: 10px; max-height: 180px; overflow-y: auto;
-             white-space: pre-wrap; margin-top: 10px; }
-  .step-view { display: none; }
-  .step-view.active { display: block; }
-</style>
+  <!-- Bump ?v= on every CSS/JS change so the page never mixes an old script with new HTML. -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Static page, no server: the author's own keys go straight to their AI and voice providers (connect-src). -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; media-src 'self' blob:; font-src 'self' data:; worker-src 'self'; connect-src 'self' https: http://localhost:* http://127.0.0.1:*">
+  <meta name="referrer" content="no-referrer">
+  <title>Video Maker</title>
+  <meta name="description" content="Make Wavestone-branded marketing videos of your AI platforms from a GitHub repository.">
+  <link rel="icon" type="image/svg+xml" href="assets/videomaker/logo/videomaker-icon.svg">
+  <link rel="stylesheet" href="css/videomaker.css?v=20261012-1">
 </head>
 <body>
-<div class="shell">
-  <div class="topbar">
-    <div class="brand-mark">VD</div>
-    <div>
-      <div class="brand-eyebrow">Crisis Toolkit</div>
-      <div class="brand-name">Video Debriefer — Studio</div>
+  <header class="vm-header">
+    <div class="vm-brandbar">
+      <div class="vm-lockup">
+        <a class="vm-wslink" href="https://www.wavestone.com/" target="_blank" rel="noopener noreferrer" title="Wavestone"><svg class="vm-wslogo" viewBox="0 0 290 38" role="img" aria-label="Wavestone" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M208.544 37.996c-2.614.042-5.105-.49-7.534-1.36-2.931-1.05-5.357-2.774-7.088-5.32-1.249-1.838-2.093-3.872-2.111-6.104-.014-1.71.018-3.46.373-5.122.425-1.99 1.465-3.741 2.916-5.289 2.532-2.704 5.636-4.248 9.315-4.774 1.234-.176 2.49-.563 3.703-.466 2.274.18 4.548.532 6.772 1.023 2.147.473 4.016 1.599 5.708 2.977 1.405 1.143 2.419 2.57 3.26 4.138 1.018 1.904 1.359 3.99 1.391 6.06.028 1.895-.401 3.788-1.175 5.602-.833 1.951-2.206 3.468-3.742 4.836-.901.801-2.022 1.46-3.161 1.9-1.745.673-3.568 1.17-5.395 1.599-1.043.245-2.153.207-3.235.297l.003.003Zm-.057-3.191c.898-.11 1.795-.2 2.689-.339 1.887-.297 3.487-1.257 4.658-2.615 1.905-2.207 2.621-4.956 2.692-7.789.036-1.385-.372-2.788-.656-4.17-.738-3.567-2.951-5.844-6.538-6.807-2.273-.612-4.487-.443-6.757.348-3.243 1.127-4.835 3.527-5.648 6.49-.596 2.177-.585 4.46-.213 6.713.327 1.965 1.121 3.73 2.473 5.23 1.93 2.144 4.452 2.897 7.3 2.935v.004ZM159.506 15.91c-2.696-1.74-5.573-2.642-8.56-3.064-2.618-.37-5.243-.217-7.669 1.116-1.401.77-2.096 2.88-.216 3.931 1.365.763 2.88 1.31 4.381 1.786 1.926.611 3.955.933 5.856 1.61 1.863.663 3.768 1.405 5.385 2.49 1.788 1.195 2.842 3.019 2.962 5.26.096 1.818-.362 3.438-1.497 4.864-1.266 1.596-2.994 2.543-4.934 3.154a19.396 19.396 0 0 1-8.407.743c-2.168-.287-4.346-.76-6.407-1.454-2.057-.695-3.976-1.77-6.084-2.736l2.065-2.922c1.834.853 3.54 1.754 5.328 2.455 2.682 1.05 5.488 1.548 8.397 1.275 1.504-.142 3.018-.397 4.214-1.33 2.313-1.803 1.359-3.285-.607-4.414-2.426-1.396-5.271-1.82-7.988-2.512a28.462 28.462 0 0 1-3.643-1.184c-1.359-.55-2.672-1.199-3.764-2.215-2.129-1.979-2.657-4.352-1.948-7.063.699-2.664 2.65-4.18 5.112-5.13 3.182-1.23 6.509-1.596 9.879-1.036 2.2.366 4.364.957 6.528 1.513 1.45.373 1.61.656 1.61 2.131v2.732h.007Zm113.459-1.99v8.004h15.357v3.32h-15.329v8.075h17.006v3.71H266.52V10.25h23.111v3.671h-16.669.003ZM129.656 37.022H106.35v-26.77h23.111v3.665H112.66v8.014h15.488v3.299h-15.495v8.079h17.003v3.713Zm128.958.608c-7.896-5.955-15.722-11.855-23.714-17.886V37.01h-3.693V9.585c8.003 6.035 15.896 11.99 23.888 18.018V10.169h3.519V37.63Zm-226.567.27L16.41 10.204h1.1c2.011 0 4.022.062 6.027-.028.89-.041 1.44.26 1.82.947 1.014 1.837 1.99 3.696 3.008 5.53.727 1.305 1.518 2.577 2.245 3.882.703 1.258 1.352 2.54 2.044 3.8.202.366.471.694.77 1.122.9-1.582 1.713-3.077 2.596-4.535a135.44 135.44 0 0 1 3.239-5.105c1.199-1.793 2.387-3.596 3.724-5.289 1.72-2.183 3.566-4.273 5.396-6.373A62.574 62.574 0 0 1 51.689.65c.333-.324.883-.584 1.348-.608 1.44-.08 2.887-.027 4.593-.027C46.041 10.8 37.486 23.316 32.043 37.9h.004Zm31.429-5.586c-4.3 0-8.525.007-12.753-.01-.522 0-.766.183-.997.636-.65 1.264-1.366 2.494-2.09 3.723-.106.183-.375.38-.574.384-1.444.03-2.884.017-4.523.017 5.161-9.21 10.252-18.287 15.406-27.482 5.14 9.174 10.21 18.228 15.392 27.485h-2.951c-1.004 0-2.019-.076-3.012.021-.961.093-1.504-.231-1.908-1.067-.603-1.244-1.306-2.442-1.99-3.703v-.004ZM56.76 20.19c-1.685 3.06-3.256 5.917-4.838 8.787h9.688l-4.846-8.787h-.004Zm44.035-9.983-15.431 27.53c-5.18-9.24-10.28-18.342-15.42-27.513h7.254c3.047 5.51 6.101 11.023 9.198 16.619.383-.608.763-1.147 1.075-1.724.677-1.247 1.287-2.532 1.98-3.768.695-1.25 1.479-2.456 2.188-3.7a343.308 343.308 0 0 0 2.976-5.344c.327-.597.571-1.24.908-1.83.086-.149.387-.256.59-.26 1.5-.02 2.997-.01 4.685-.01h-.003Zm79.939 26.801h-6.513V13.865h-10.032V10.2h26.489v3.72h-9.94v23.088h-.004Zm-165.172.716L0 10.266h8.354c.798 1.361 1.618 2.712 2.39 4.083.71 1.26 1.36 2.55 2.051 3.817.696 1.268 1.412 2.528 2.122 3.79.99 1.754 1.99 3.502 2.976 5.257.514.915 1.032 1.83 1.504 2.766.128.253.241.65.128.854-1.2 2.162-2.448 4.3-3.682 6.445-.072.121-.15.235-.288.442l.007.004Z"/></svg></a>
+        <span class="vm-divider" aria-hidden="true"></span>
+        <button class="vm-home" id="vm-home" type="button" title="Show the welcome screen">
+          <svg class="vm-mark" width="26" height="26" viewBox="0 0 100 100" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="vm-mark-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5a33dc"/><stop offset="1" stop-color="#3a17a8"/></linearGradient></defs><rect x="2" y="2" width="96" height="96" rx="22" fill="url(#vm-mark-grad)"/><rect x="2.75" y="2.75" width="94.5" height="94.5" rx="21.25" fill="none" stroke="#fff" stroke-opacity="0.28" stroke-width="1.5"/><path fill="#fff" d="M47.48 38.42 38.07 65.72H28.35L18.9 38.42H27.03L33.23 58.13L39.39 38.42Z M80.16 38.42V65.72H72.57V50.66L67.42 65.72H61.07L55.88 50.54V65.72H48.29V38.42H57.47L64.32 56.16L71.02 38.42Z"/><circle cx="80" cy="20" r="9.5" fill="#04f06a" fill-opacity="0.22"/><circle cx="80" cy="20" r="6" fill="#04f06a"/></svg>
+          <span class="vm-product">Video<b>Maker</b></span>
+        </button>
+      </div>
+      <div class="vm-filebar" role="group" aria-label="Project">
+        <button class="vm-btn vm-btn--outline vm-btn--sm" id="vm-new" type="button" title="Start a new, empty project"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 11v6M9 14h6"/></svg><span>New project</span></button>
+        <label class="vm-btn vm-btn--outline vm-btn--sm" title="Open a project file (.json) saved earlier"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 10v6M9 13l3-3 3 3"/></svg><span>Load project</span>
+          <input id="import-json" type="file" accept="application/json,.json" hidden>
+        </label>
+        <button class="vm-btn vm-btn--outline vm-btn--sm" id="export-json" type="button" title="Save the script, pictures and settings in one file (.json), to reopen them later or share them"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg><span>Save project</span></button>
+      </div>
+      <button class="vm-ai-status" id="ai-status" type="button" data-short="AI" title="AI settings: your own API key">Checking AI</button>
     </div>
-    <div class="steps">
-      <button class="step-btn active" data-step="1">1 · Scénario</button>
-      <button class="step-btn" data-step="2">2 · Adaptation</button>
-      <button class="step-btn" data-step="3">3 · Production</button>
-    </div>
-    <div class="server-pill"><span class="server-dot" id="server-dot"></span>
-      <span id="server-label">serveur local : hors ligne</span></div>
-  </div>
+    <nav class="vm-steps" aria-label="Steps">
+      <button class="vm-step is-active" data-step="source" type="button"><span>1</span> Content</button>
+      <button class="vm-step" data-step="script" type="button"><span>2</span> Edit</button>
+      <button class="vm-step" data-step="produce" type="button"><span>3</span> Export</button>
+    </nav>
+  </header>
 
-  <div class="workspace">
-    <aside class="panel">
-
-      <!-- ════════ STEP 1 — SCÉNARIO ════════ -->
-      <div class="step-view active" id="view-1">
-        <h3>Matière première</h3>
-        <div class="hint">Collez une timeline (format Crisis Debriefer / TIMELINE_EVENTS),
-          un compte-rendu, des notes… Tout texte qui raconte la crise.</div>
-        <div class="field">
-          <textarea id="src-material" rows="9" placeholder='[{"title": "…", "headline": "…", …}] ou texte libre'></textarea>
-        </div>
-        <div class="row2">
-          <button class="btn" id="btn-load-json">Charger un fichier…</button>
-          <button class="btn" id="btn-load-example">Exemple Helios Leaks</button>
-        </div>
-        <input type="file" id="file-input" accept=".json,.txt,.md" style="display:none">
-
-        <div class="divider"></div>
-        <h3>Réglages de la vidéo</h3>
-        <div class="row2">
-          <div class="field"><label>Durée cible (s)</label>
-            <input type="number" id="set-duration" value="120" min="45" max="300"></div>
-          <div class="field"><label>Langue</label>
-            <select id="set-lang">
-              <option value="fr" selected>Français</option><option value="en">English</option>
-              <option value="es">Español</option><option value="de">Deutsch</option>
-              <option value="it">Italiano</option><option value="pt">Português</option>
-            </select></div>
-        </div>
-        <div class="row2">
-          <div class="field"><label>Style graphique</label>
-            <select id="set-theme">
-              <option value="wavestone" selected>Wavestone (indigo / néon)</option>
-              <option value="cyber-dark">Cyber dark (sépia / rouge)</option>
-            </select></div>
-          <div class="field"><label>Voix</label>
-            <select id="set-voice">
-              <option value="" selected>Auto (selon langue)</option>
-            </select></div>
-        </div>
-        <div class="row2">
-          <div class="field"><label>Ton</label>
-            <select id="set-tone">
-              <option value="documentaire sobre et factuel" selected>Documentaire sobre</option>
-              <option value="dramatique et tendu">Dramatique</option>
-              <option value="pédagogique et accessible">Pédagogique</option>
-              <option value="executive brief, direct et synthétique">Executive brief</option>
-            </select></div>
-          <div class="field"><label>Public</label>
-            <select id="set-audience">
-              <option value="comité exécutif" selected>Comex</option>
-              <option value="équipes cyber">Équipes cyber</option>
-              <option value="tous collaborateurs">Tous collaborateurs</option>
-            </select></div>
-        </div>
-
-        <div class="divider"></div>
-        <h3>Génération du scénario</h3>
-        <div class="hint">L’IA n’est utilisée <b>que pour cette étape</b> (rédaction du
-          brouillon). Le gabarit sans IA construit la structure depuis votre timeline ;
-          vous rédigez ensuite la voix off vous-même.</div>
-        <div class="row2">
-          <div class="field"><label>Fournisseur IA</label>
-            <select id="ai-provider">
-              <option value="none">Aucun (gabarit)</option>
-              <option value="anthropic" selected>Claude (Anthropic)</option>
-              <option value="openai">OpenAI</option>
-              <option value="openrouter">OpenRouter</option>
-            </select></div>
-          <div class="field"><label>Modèle
-              <button class="mini-btn" id="btn-models" title="Rafraîchir la liste depuis l’API">⟳</button></label>
-            <select id="ai-model"></select></div>
-        </div>
-        <div class="field"><label>Clé API (stockée uniquement dans ce navigateur)</label>
-          <input type="password" id="ai-key" placeholder="sk-… / sk-ant-…"></div>
-        <div class="hint" id="models-status"></div>
-        <div class="row2">
-          <button class="btn btn-primary" id="btn-generate">✦ Générer le scénario (IA)</button>
-          <button class="btn" id="btn-skeleton">Gabarit sans IA</button>
-        </div>
-        <div class="hint" id="gen-status"></div>
+  <main class="vm-main">
+    <!-- 1. CONTENT: what the video is about, and the brief -->
+    <section class="vm-panel is-active" id="panel-source">
+      <div class="vm-intro">
+        <h1>What is your video about?</h1>
+        <p>Paste some text, add a document or a GitHub repository. The AI writes the story, cuts it into scenes and decides what appears on screen with each word.</p>
       </div>
 
-      <!-- ════════ STEP 2 — ADAPTATION ════════ -->
-      <div class="step-view" id="view-2">
-        <h3>Projet <span class="badge" id="dur-badge">—</span></h3>
-        <div class="row2">
-          <div class="field"><label>Titre</label><input type="text" id="p-title"></div>
-          <div class="field"><label>Style</label>
-            <select id="p-theme">
-              <option value="wavestone">Wavestone</option>
-              <option value="cyber-dark">Cyber dark</option>
-            </select></div>
-        </div>
-        <div class="divider"></div>
-        <h3>Scènes <button class="mini-btn" id="btn-add-scene" title="Ajouter">＋</button></h3>
-        <div id="scene-list"></div>
-        <div class="divider"></div>
-        <h3>JSON du projet</h3>
-        <div class="hint">Édition libre — toutes les options avancées
-          (cues <code>at</code>, caméra, moods, couleurs…) sont là.</div>
-        <div class="field"><textarea id="json-editor" rows="14" spellcheck="false"></textarea></div>
-        <div class="row2">
-          <button class="btn" id="btn-apply-json">Appliquer le JSON</button>
-          <button class="btn" id="btn-download">Télécharger le projet</button>
-        </div>
-      </div>
+      <div class="vm-layout">
+        <div class="vm-col">
+          <div class="vm-card">
+            <label class="vm-field vm-field--lead" for="source-text">Source
+              <small>Everything you add lands in this box, where you can read and trim it.</small>
+            </label>
+            <textarea id="source-text" class="vm-source" rows="11" maxlength="80000" placeholder="Paste or write anything: a pitch, a product page, an article, meeting notes…"></textarea>
+            <div class="vm-attach" role="group" aria-label="Add a source">
+              <label class="vm-pillbtn">
+                <span aria-hidden="true">＋</span> Document <small>PDF · PPTX · DOCX</small>
+                <input id="source-file" type="file" accept=".pdf,.pptx,.docx,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple hidden>
+              </label>
+              <button class="vm-pillbtn" type="button" data-disclose="github" aria-expanded="false"><span aria-hidden="true">＋</span> GitHub repository</button>
+            </div>
+            <div class="vm-disclose" id="disclose-github" hidden>
+              <input id="repo" type="text" placeholder="owner/repo or https://github.com/owner/repo" autocomplete="off" aria-label="GitHub repository">
+              <input id="token" type="password" placeholder="Token for a private repository (optional, never stored)" autocomplete="off" aria-label="GitHub token">
+              <div class="vm-row">
+                <button class="vm-btn vm-btn--primary vm-btn--sm" id="analyze" type="button">Read repository</button>
+                <p class="vm-status" id="analyze-status"></p>
+              </div>
+            </div>
+            <p class="vm-status" id="source-status"></p>
+          </div>
 
-      <!-- ════════ STEP 3 — PRODUCTION ════════ -->
-      <div class="step-view" id="view-3">
-        <h3>Produire en local</h3>
-        <div class="hint">La production tourne <b>en local</b> (voix neurale, rendu
-          1080p24, musique synthétisée, mixage, H.264) — aucune IA, aucun cloud.</div>
-
-        <div id="prod-server-ok" style="display:none">
-          <button class="btn btn-accent" id="btn-produce" style="width:100%">▶ Lancer la production</button>
-          <div style="margin:14px 0 6px"><div class="progress-wrap"><div class="progress-bar" id="prod-bar"></div></div></div>
-          <div class="hint" id="prod-stage"></div>
-          <div class="log-box" id="prod-log" style="display:none"></div>
-          <div id="prod-done" style="display:none; margin-top:10px">
-            <a class="btn btn-primary" id="prod-link" href="#" download style="text-decoration:none; display:inline-block">⬇ Télécharger le MP4</a>
+          <div class="vm-card">
+            <div class="vm-card__head">
+              <h2>Pictures</h2>
+              <span class="vm-hint">Screenshots of the product, or an animated GIF or short clip (MP4 or WebM, 6 s and 8 MB at most, 3 of them) that plays inside the scene. Ticked pictures (6 max) are shown to the AI, which stages them and places the callouts.</span>
+            </div>
+            <div class="vm-drop" id="drop">
+              <span>Drop screenshots, GIFs or clips here or paste them (Ctrl/Cmd+V)</span>
+              <label class="vm-btn vm-btn--outline vm-btn--sm">Choose pictures
+                <input id="upload" type="file" accept="image/*,video/mp4,video/webm,video/quicktime" multiple hidden>
+              </label>
+            </div>
+            <p class="vm-status" id="assets-status"></p>
+            <div class="vm-assets" id="assets"></div>
           </div>
         </div>
 
-        <div id="prod-server-no">
-          <div class="hint"><b>Serveur local non détecté.</b> Lancez-le dans un terminal :</div>
-          <div class="log-box" style="display:block">cd video-studio/pipeline
-python3 server.py</div>
-          <div class="hint">…puis revenez ici. Ou en ligne de commande directe :</div>
-          <div class="log-box" style="display:block">python3 pipeline/build.py mon-projet.json</div>
-          <button class="btn" id="btn-download2" style="margin-top:8px">Télécharger le projet JSON</button>
+        <aside class="vm-card vm-brief" aria-label="Brief">
+          <h2>Brief</h2>
+          <div class="vm-field">Purpose
+            <select id="purpose" class="vm-hidden-select" aria-label="Purpose of the video">
+              <option value="pitch">Product pitch: a marketing film of a product or platform</option>
+              <option value="proposal">Proposal summary: need, approach, strengths, team</option>
+              <option value="project">Project: stakes, goals, approach, results</option>
+              <option value="debrief">Crisis debrief: scenario, key moments, lessons</option>
+              <option value="event">Trade show: what we announce and show, where, the team</option>
+              <option value="neutral">No angle: follows the source as it is</option>
+            </select>
+            <div class="vm-tiles" data-seg="purpose"></div>
+            <label class="vm-check vm-check--block" id="price-box" hidden><input id="price" type="checkbox"> <span><strong>End with the price</strong> <small>as the proposal states it; left out otherwise</small></span></label>
+          </div>
+          <div class="vm-two">
+            <label class="vm-field"><span id="product-name-label">Product name</span>
+              <input id="product-name" type="text" placeholder="e.g. CrisisMaker">
+            </label>
+            <label class="vm-field">Link at the end
+              <input id="product-url" type="url" placeholder="https://…">
+            </label>
+          </div>
+          <div class="vm-field">Length
+            <select id="duration" class="vm-hidden-select" aria-label="Target length">
+              <option value="30">30 s</option>
+              <option value="45">45 s</option>
+              <option value="60" selected>1 min</option>
+              <option value="75">1:15</option>
+              <option value="90">1:30</option>
+            </select>
+            <div class="vm-seg" data-seg="duration"></div>
+          </div>
+          <fieldset class="vm-field">
+            <legend>Languages <small>one video each</small></legend>
+            <div class="vm-chips" id="languages">
+              <label class="vm-chip"><input type="checkbox" value="fr-FR" checked> Français</label>
+              <label class="vm-chip"><input type="checkbox" value="en-US"> English</label>
+              <label class="vm-chip"><input type="checkbox" value="de-DE"> Deutsch</label>
+            </div>
+          </fieldset>
+          <div class="vm-field">Look <small>can be changed while editing</small>
+            <select id="style-brief" class="vm-hidden-select" aria-label="Visual style">
+              <option value="product">Product video: a continuous canvas, a cursor that clicks</option>
+              <option value="showcase">Showcase: Apple-style, vertical 9:16, big words</option>
+              <option value="launch">Launch teaser: dark and cinematic, very little text</option>
+              <option value="slides">Slides: successive Wavestone scenes</option>
+            </select>
+            <div class="vm-tiles vm-tiles--looks" data-seg="style-brief"></div>
+          </div>
+          <div class="vm-field">Rhythm
+            <select id="pace" class="vm-hidden-select" aria-label="Rhythm">
+              <option value="fast">Fast: quick cuts, few words</option>
+              <option value="standard">Standard: fuller sentences</option>
+            </select>
+            <div class="vm-seg" data-seg="pace"></div>
+          </div>
+          <details class="vm-more" id="brief-more">
+            <summary>More options</summary>
+            <div class="vm-more__body">
+              <div class="vm-two">
+                <label class="vm-field">Audience
+                  <input id="audience" type="text" placeholder="e.g. CISOs and business leaders">
+                </label>
+                <label class="vm-field">Tone
+                  <input id="tone" type="text" placeholder="e.g. confident, warm, concrete">
+                </label>
+              </div>
+              <label class="vm-field"><span id="notes-label">Key strengths to feature</span> <small>one per line</small>
+                <textarea id="notes" rows="3" placeholder="e.g. Hosted in Europe&#10;Used by 12 CAC 40 clients"></textarea>
+              </label>
+              <label class="vm-check vm-check--block" id="marketing-box"><input id="marketing" type="checkbox"> <span><strong>Marketing ++</strong> <small>bolder, benefit-first copy with punchlines (facts stay sourced)</small></span></label>
+              <label class="vm-field">Signed by
+                <input id="brand" type="text" value="Wavestone">
+              </label>
+            </div>
+          </details>
+          <div class="vm-cta">
+            <button class="vm-btn vm-btn--accent vm-btn--lg vm-btn--block" id="generate" type="button">Write the script</button>
+            <button class="vm-link" id="blank" type="button">or start from a blank script</button>
+            <div class="vm-log" id="generate-log" aria-live="polite"></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- 2. EDIT: timeline, preview and one inspector (scene / film) -->
+    <section class="vm-panel" id="panel-script">
+      <div class="vm-editbar">
+        <div class="vm-tabs" id="lang-tabs" role="tablist" aria-label="Language"></div>
+        <button class="vm-btn vm-btn--accent vm-btn--sm" id="to-export" type="button">Export →</button>
+      </div>
+
+      <div class="vm-studio">
+        <aside class="vm-scenes">
+          <div class="vm-scenes__head">
+            <h2>Timeline</h2>
+            <span class="vm-hint" id="timeline-info"></span>
+          </div>
+          <ol class="vm-scene-list" id="scene-list"></ol>
+          <div class="vm-row">
+            <select id="new-scene-type" aria-label="Scene type"></select>
+            <button class="vm-btn vm-btn--outline vm-btn--sm" id="add-scene" type="button">+ Scene</button>
+          </div>
+        </aside>
+
+        <div class="vm-preview">
+          <div class="vm-canvas-wrap"><canvas id="preview" width="1920" height="1080"></canvas></div>
+          <div class="vm-player">
+            <button class="vm-btn vm-btn--primary vm-btn--sm" id="play" type="button">Play</button>
+            <input id="scrub" type="range" min="0" max="1000" value="0" aria-label="Position">
+            <span id="clock">0:00 / 0:00</span>
+            <button class="vm-btn vm-btn--outline vm-btn--sm" id="voices" type="button">Play with voice</button>
+          </div>
+          <p class="vm-status" id="voice-status"></p>
+          <div id="voice-progress" aria-live="polite"></div>
         </div>
 
-        <div class="divider"></div>
-        <h3>Cloud GitHub</h3>
-        <div class="hint">Production sur <b>GitHub Actions</b> (~12 min) : le projet est
-          poussé dans <code>requests/</code>, le workflow produit le MP4 et le publie dans
-          la release <code>videos</code>. Token : <i>fine-grained PAT</i> du repo avec
-          permissions <b>Contents (read/write)</b> et <b>Actions (read)</b>.</div>
-        <div class="field"><label>Repo (owner/nom)</label>
-          <input type="text" id="gh-repo" value="gbillois/VideoMaker"></div>
-        <div class="field"><label>Token GitHub (stocké uniquement dans ce navigateur)</label>
-          <input type="password" id="gh-token" placeholder="github_pat_…"></div>
-        <button class="btn btn-primary" id="btn-gh-produce" style="width:100%">☁ Produire via GitHub Actions</button>
-        <div class="hint" id="gh-stage"></div>
-        <div id="gh-done" style="display:none; margin-top:8px">
-          <a class="btn btn-accent" id="gh-link" href="#" target="_blank" style="text-decoration:none; display:inline-block">⬇ Télécharger le MP4</a>
-          <a class="btn" id="gh-run-link" href="#" target="_blank" style="text-decoration:none; display:inline-block">Voir le run</a>
+        <div class="vm-inspector">
+          <div class="vm-seg vm-seg--full" role="tablist" aria-label="Inspector">
+            <button class="vm-seg__btn is-active" type="button" data-inspect="scene" role="tab" aria-selected="true"><strong>Scene</strong></button>
+            <button class="vm-seg__btn" type="button" data-inspect="film" role="tab" aria-selected="false"><strong>Film</strong></button>
+          </div>
+          <div class="vm-editor" id="editor" data-pane="scene"></div>
+          <div class="vm-film" data-pane="film" hidden>
+            <section class="vm-group">
+              <h3>Look</h3>
+              <label class="vm-rowfield">Style
+                <select id="style">
+                  <option value="product">Product video</option>
+                  <option value="showcase">Showcase (Apple-style)</option>
+                  <option value="launch">Launch teaser</option>
+                  <option value="slides">Slides</option>
+                </select>
+              </label>
+              <label class="vm-rowfield">Format
+                <select id="format" title="Vertical output is available in the Showcase style">
+                  <option value="vertical">Vertical 9:16</option>
+                  <option value="landscape">Horizontal 16:9</option>
+                </select>
+              </label>
+              <label class="vm-rowfield">Brand background <select id="theme-surface"></select></label>
+              <label class="vm-rowfield">Canvas
+                <select id="theme-paper">
+                  <option value="white">White</option>
+                  <option value="lavender">Light violet</option>
+                  <option value="grey">Light grey</option>
+                </select>
+              </label>
+              <label class="vm-rowfield">Rhythm
+                <select id="pace-project">
+                  <option value="fast">Fast cuts</option>
+                  <option value="standard">Standard</option>
+                </select>
+              </label>
+            </section>
+            <section class="vm-group">
+              <h3>Voice and music</h3>
+              <label class="vm-rowfield">Voice <select id="voice"></select></label>
+              <label class="vm-rowfield">Speed
+                <select id="rate">
+                  <option value="-5%">-5%</option>
+                  <option value="+0%">Normal</option>
+                  <option value="+5%" selected>+5%</option>
+                  <option value="+10%">+10%</option>
+                </select>
+              </label>
+              <label class="vm-rowfield">Music
+                <select id="music">
+                  <option value="uplifting">Upbeat</option>
+                  <option value="calm">Calm</option>
+                  <option value="none">None</option>
+                </select>
+              </label>
+              <label class="vm-rowfield">Music volume <input id="music-level" type="range" min="0" max="1" step="0.05" value="0.6"></label>
+            </section>
+            <section class="vm-group">
+              <h3>Captions</h3>
+              <label class="vm-rowfield">Show captions <input id="captions" type="checkbox" checked></label>
+              <label class="vm-rowfield">Emphasised <input id="captions-bold" type="checkbox"></label>
+            </section>
+          </div>
         </div>
       </div>
-    </aside>
+    </section>
 
-    <main class="preview-side">
-      <div class="preview-frame" id="preview-frame">
-        <iframe id="preview" src="engine/scene.html?preview=1"></iframe>
+    <!-- 3. EXPORT: the videos, and the project file -->
+    <section class="vm-panel" id="panel-produce">
+      <div class="vm-intro">
+        <h1>Make the videos.</h1>
+        <p>Voice, music, pictures and captions are put together in this browser (Chrome or Edge recommended). Keep this tab open while the videos are being made.</p>
+        <p class="vm-status" id="support"></p>
       </div>
-      <div class="scrub-bar">
-        <button class="play-btn" id="btn-play">▶</button>
-        <input type="range" id="scrub" min="0" max="100" step="0.05" value="0">
-        <span class="scrub-time" id="scrub-time">0.0 / 0.0 s</span>
+      <div class="vm-produce" id="produce-list"></div>
+      <div class="vm-cta">
+        <button class="vm-btn vm-btn--accent vm-btn--lg" id="produce-all" type="button">Make all videos</button>
+        <p class="vm-status" id="produce-overall" aria-live="polite"></p>
       </div>
-    </main>
+    </section>
+  </main>
+
+  <!-- Welcome screen, as in CrisisMaker: shown on a first visit and from the VideoMaker name -->
+  <div class="vm-launch-overlay" id="vm-launch" role="dialog" aria-modal="true" aria-label="VideoMaker welcome" hidden>
+    <div class="vm-launch">
+      <div class="vm-launch__hero">
+        <button class="vm-launch__close" id="vm-launch-close" type="button" title="Close" aria-label="Close">&times;</button>
+        <div class="vm-launch__brand">
+          <svg class="vm-wslogo vm-wslogo--light" viewBox="0 0 290 38" role="img" aria-label="Wavestone" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M208.544 37.996c-2.614.042-5.105-.49-7.534-1.36-2.931-1.05-5.357-2.774-7.088-5.32-1.249-1.838-2.093-3.872-2.111-6.104-.014-1.71.018-3.46.373-5.122.425-1.99 1.465-3.741 2.916-5.289 2.532-2.704 5.636-4.248 9.315-4.774 1.234-.176 2.49-.563 3.703-.466 2.274.18 4.548.532 6.772 1.023 2.147.473 4.016 1.599 5.708 2.977 1.405 1.143 2.419 2.57 3.26 4.138 1.018 1.904 1.359 3.99 1.391 6.06.028 1.895-.401 3.788-1.175 5.602-.833 1.951-2.206 3.468-3.742 4.836-.901.801-2.022 1.46-3.161 1.9-1.745.673-3.568 1.17-5.395 1.599-1.043.245-2.153.207-3.235.297l.003.003Zm-.057-3.191c.898-.11 1.795-.2 2.689-.339 1.887-.297 3.487-1.257 4.658-2.615 1.905-2.207 2.621-4.956 2.692-7.789.036-1.385-.372-2.788-.656-4.17-.738-3.567-2.951-5.844-6.538-6.807-2.273-.612-4.487-.443-6.757.348-3.243 1.127-4.835 3.527-5.648 6.49-.596 2.177-.585 4.46-.213 6.713.327 1.965 1.121 3.73 2.473 5.23 1.93 2.144 4.452 2.897 7.3 2.935v.004ZM159.506 15.91c-2.696-1.74-5.573-2.642-8.56-3.064-2.618-.37-5.243-.217-7.669 1.116-1.401.77-2.096 2.88-.216 3.931 1.365.763 2.88 1.31 4.381 1.786 1.926.611 3.955.933 5.856 1.61 1.863.663 3.768 1.405 5.385 2.49 1.788 1.195 2.842 3.019 2.962 5.26.096 1.818-.362 3.438-1.497 4.864-1.266 1.596-2.994 2.543-4.934 3.154a19.396 19.396 0 0 1-8.407.743c-2.168-.287-4.346-.76-6.407-1.454-2.057-.695-3.976-1.77-6.084-2.736l2.065-2.922c1.834.853 3.54 1.754 5.328 2.455 2.682 1.05 5.488 1.548 8.397 1.275 1.504-.142 3.018-.397 4.214-1.33 2.313-1.803 1.359-3.285-.607-4.414-2.426-1.396-5.271-1.82-7.988-2.512a28.462 28.462 0 0 1-3.643-1.184c-1.359-.55-2.672-1.199-3.764-2.215-2.129-1.979-2.657-4.352-1.948-7.063.699-2.664 2.65-4.18 5.112-5.13 3.182-1.23 6.509-1.596 9.879-1.036 2.2.366 4.364.957 6.528 1.513 1.45.373 1.61.656 1.61 2.131v2.732h.007Zm113.459-1.99v8.004h15.357v3.32h-15.329v8.075h17.006v3.71H266.52V10.25h23.111v3.671h-16.669.003ZM129.656 37.022H106.35v-26.77h23.111v3.665H112.66v8.014h15.488v3.299h-15.495v8.079h17.003v3.713Zm128.958.608c-7.896-5.955-15.722-11.855-23.714-17.886V37.01h-3.693V9.585c8.003 6.035 15.896 11.99 23.888 18.018V10.169h3.519V37.63Zm-226.567.27L16.41 10.204h1.1c2.011 0 4.022.062 6.027-.028.89-.041 1.44.26 1.82.947 1.014 1.837 1.99 3.696 3.008 5.53.727 1.305 1.518 2.577 2.245 3.882.703 1.258 1.352 2.54 2.044 3.8.202.366.471.694.77 1.122.9-1.582 1.713-3.077 2.596-4.535a135.44 135.44 0 0 1 3.239-5.105c1.199-1.793 2.387-3.596 3.724-5.289 1.72-2.183 3.566-4.273 5.396-6.373A62.574 62.574 0 0 1 51.689.65c.333-.324.883-.584 1.348-.608 1.44-.08 2.887-.027 4.593-.027C46.041 10.8 37.486 23.316 32.043 37.9h.004Zm31.429-5.586c-4.3 0-8.525.007-12.753-.01-.522 0-.766.183-.997.636-.65 1.264-1.366 2.494-2.09 3.723-.106.183-.375.38-.574.384-1.444.03-2.884.017-4.523.017 5.161-9.21 10.252-18.287 15.406-27.482 5.14 9.174 10.21 18.228 15.392 27.485h-2.951c-1.004 0-2.019-.076-3.012.021-.961.093-1.504-.231-1.908-1.067-.603-1.244-1.306-2.442-1.99-3.703v-.004ZM56.76 20.19c-1.685 3.06-3.256 5.917-4.838 8.787h9.688l-4.846-8.787h-.004Zm44.035-9.983-15.431 27.53c-5.18-9.24-10.28-18.342-15.42-27.513h7.254c3.047 5.51 6.101 11.023 9.198 16.619.383-.608.763-1.147 1.075-1.724.677-1.247 1.287-2.532 1.98-3.768.695-1.25 1.479-2.456 2.188-3.7a343.308 343.308 0 0 0 2.976-5.344c.327-.597.571-1.24.908-1.83.086-.149.387-.256.59-.26 1.5-.02 2.997-.01 4.685-.01h-.003Zm79.939 26.801h-6.513V13.865h-10.032V10.2h26.489v3.72h-9.94v23.088h-.004Zm-165.172.716L0 10.266h8.354c.798 1.361 1.618 2.712 2.39 4.083.71 1.26 1.36 2.55 2.051 3.817.696 1.268 1.412 2.528 2.122 3.79.99 1.754 1.99 3.502 2.976 5.257.514.915 1.032 1.83 1.504 2.766.128.253.241.65.128.854-1.2 2.162-2.448 4.3-3.682 6.445-.072.121-.15.235-.288.442l.007.004Z"/></svg>
+          <span class="vm-divider" aria-hidden="true"></span>
+          <span class="vm-launch__kicker">VideoMaker</span>
+        </div>
+        <h1>Turn a pitch, a document or a repository into a branded video.</h1>
+        <p>Paste some text, add a document or a GitHub repository, and your screenshots. The AI writes the story, cuts it into scenes and decides what appears on screen with each word; you rework it, then make one video per language.</p>
+        <div class="vm-launch__stats">
+          <div class="vm-launch__stat"><strong>AI-written script</strong><span>The AI writes the voice-over and stages your pictures, with callouts</span></div>
+          <div class="vm-launch__stat"><strong>Made in your browser</strong><span>Voice, music, pictures and captions are put together here (Chrome or Edge)</span></div>
+          <div class="vm-launch__stat"><strong>Several languages</strong><span>Français, English, Deutsch: one video each, plus a project file to reopen</span></div>
+        </div>
+      </div>
+      <div class="vm-launch__body">
+        <div class="vm-launch__title">What you can do</div>
+        <div class="vm-launch__features">
+          <button class="vm-launch__feature" type="button" data-launch-step="source"><span class="vm-launch__icon"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg></span><strong>1 · Content</strong><span>Paste text, add a PDF, PPTX or DOCX, a web page or a repository, and pictures. Set the purpose, length, languages and look.</span></button>
+          <button class="vm-launch__feature" type="button" data-launch-step="script"><span class="vm-launch__icon"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span><strong>2 · Edit</strong><span>Rework each scene of the script, its voice-over and pictures, and preview the film with voices and music.</span></button>
+          <button class="vm-launch__feature" type="button" data-launch-step="produce"><span class="vm-launch__icon"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14"/><path d="m10 9 5 3-5 3z"/></svg></span><strong>3 · Export</strong><span>Make the videos in this browser, one per language, and save the project to reopen or share it.</span></button>
+        </div>
+        <div class="vm-launch__actions">
+          <button class="vm-btn vm-btn--primary vm-btn--lg" id="vm-launch-start" type="button">Start</button>
+          <button class="vm-btn vm-btn--outline vm-btn--lg" id="vm-launch-load" type="button">Load a project</button>
+        </div>
+      </div>
+    </div>
   </div>
-</div>
 
-<script>
-/* ═══════════════════════ state ═══════════════════════ */
-const $ = id => document.getElementById(id);
-let project = null;
-let totalDur = 0, playing = false, playT = 0, lastTick = 0;
-let engineReady = false;
-const SERVER = 'http://localhost:8765';
-let serverOn = false;
+  <!-- AI settings: the author's own keys (CrisisMaker style). Keys stay in this tab (session storage). -->
+  <div class="vm-launch-overlay" id="vm-settings" role="dialog" aria-modal="true" aria-labelledby="vm-settings-title" hidden>
+    <div class="vm-dialog">
+      <div class="vm-dialog__head">
+        <h2 id="vm-settings-title">AI settings</h2>
+        <button class="vm-icon-btn" id="set-close" type="button" aria-label="Close">✕</button>
+      </div>
+      <p class="vm-hint">Video Maker runs in your browser and has no server. Bring your own keys: they go straight from this page to your providers, stay in this browser tab (session storage) and are never saved in project files.</p>
 
-/* ═══════════════ preview iframe scaling & messaging ═══════════════ */
-function fitPreview(){
-  const frame = $('preview-frame'), ifr = $('preview');
-  const k = Math.min(frame.clientWidth/1920, frame.clientHeight/1080);
-  ifr.style.transform = `scale(${k})`;
-  ifr.style.left = ((frame.clientWidth - 1920*k)/2) + 'px';
-  ifr.style.top = ((frame.clientHeight - 1080*k)/2) + 'px';
-}
-window.addEventListener('resize', fitPreview);
+      <section class="vm-group">
+        <h3>Script writer</h3>
+        <label class="vm-rowfield">Provider <select id="set-provider"></select></label>
+        <label class="vm-field" id="set-base-field" hidden>Server address
+          <input id="set-base" type="url" placeholder="http://127.0.0.1:11434/v1" autocomplete="off">
+          <small>An OpenAI-compatible server (Ollama's /v1, LM Studio, llama.cpp). It must allow requests from this page. Pictures are not sent to it.</small>
+        </label>
+        <label class="vm-field" id="set-key-field">API key
+          <span class="vm-inline">
+            <input id="set-key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-…">
+            <button class="vm-btn vm-btn--outline vm-btn--sm" id="set-key-toggle" type="button">Show</button>
+          </span>
+        </label>
+        <label class="vm-field">Model
+          <span class="vm-inline">
+            <input id="set-model" type="text" list="set-models" autocomplete="off" spellcheck="false">
+            <button class="vm-btn vm-btn--outline vm-btn--sm" id="set-refresh" type="button" title="Ask the provider which models this key can use">Refresh</button>
+          </span>
+          <datalist id="set-models"></datalist>
+        </label>
+      </section>
 
-function pushProject(){
-  if (!project) return;
-  $('preview').contentWindow.postMessage({ type:'project', project, t: playT }, '*');
-}
-window.addEventListener('message', ev => {
-  const m = ev.data || {};
-  if (m.type === 'engine-hello'){ engineReady = true; pushProject(); }
-  if (m.type === 'engine-ready'){
-    totalDur = m.total || 0;
-    $('scrub').max = totalDur;
-    updateDurBadge();
-    seekPreview(playT);
-  }
-});
-function seekPreview(t){
-  playT = Math.max(0, Math.min(t, totalDur));
-  $('preview').contentWindow.postMessage({ type:'seek', t: playT }, '*');
-  $('scrub').value = playT;
-  $('scrub-time').textContent = playT.toFixed(1) + ' / ' + totalDur.toFixed(1) + ' s';
-}
-$('scrub').addEventListener('input', e => { playing = false; $('btn-play').textContent = '▶'; seekPreview(parseFloat(e.target.value)); });
-$('btn-play').addEventListener('click', () => {
-  playing = !playing;
-  $('btn-play').textContent = playing ? '⏸' : '▶';
-  if (playing){ lastTick = performance.now(); requestAnimationFrame(tick); }
-});
-function tick(now){
-  if (!playing) return;
-  playT += (now - lastTick)/1000; lastTick = now;
-  if (playT >= totalDur){ playT = 0; }
-  seekPreview(playT);
-  requestAnimationFrame(tick);
-}
+      <section class="vm-group">
+        <h3>Voice-over</h3>
+        <label class="vm-rowfield">Voice provider <select id="set-voice-provider"></select></label>
+        <label class="vm-field" id="set-voice-key-field" hidden>Voice API key
+          <span class="vm-inline">
+            <input id="set-voice-key" type="password" autocomplete="off" spellcheck="false">
+            <button class="vm-btn vm-btn--outline vm-btn--sm" id="set-voice-key-toggle" type="button">Show</button>
+          </span>
+        </label>
+        <label class="vm-field" id="set-region-field" hidden>Azure Speech region
+          <input id="set-region" type="text" placeholder="westeurope" autocomplete="off" spellcheck="false">
+        </label>
+        <p class="vm-hint" id="set-voice-hint">Without a voice key the film plays with music and captions.</p>
+      </section>
 
-/* ═══════════════════════ steps ═══════════════════════ */
-document.querySelectorAll('.step-btn').forEach(b => b.addEventListener('click', () => {
-  document.querySelectorAll('.step-btn').forEach(x => x.classList.toggle('active', x === b));
-  document.querySelectorAll('.step-view').forEach(v => v.classList.remove('active'));
-  $('view-' + b.dataset.step).classList.add('active');
-}));
+      <p class="vm-status" id="set-status" aria-live="polite"></p>
+      <div class="vm-row">
+        <button class="vm-btn vm-btn--primary" id="set-save" type="button">Save</button>
+        <button class="vm-btn vm-btn--outline" id="set-cancel" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
 
-/* ═══════════════════ settings persistence ═══════════════════ */
-['ai-provider','ai-model','ai-key'].forEach(id => {
-  const saved = localStorage.getItem('vd-' + id);
-  if (saved) $(id).value = saved;
-  $(id).addEventListener('change', () => localStorage.setItem('vd-' + id, $(id).value));
-});
-
-/* ─────────── dynamic model list (fetched from the provider API) ─────────── */
-const FALLBACK_MODELS = {
-  anthropic: ['claude-fable-5', 'claude-opus-4-8', 'claude-sonnet-4-6', 'claude-haiku-4-5'],
-  openai: ['gpt-4o', 'gpt-4o-mini'],
-  openrouter: ['openrouter/auto', '~openai/gpt-latest', 'anthropic/claude-sonnet-4.6'],
-};
-function fillModels(list, keep){
-  const sel = $('ai-model');
-  const want = keep || sel.value || localStorage.getItem('vd-ai-model') || '';
-  const opts = list.slice();
-  if (want && !opts.includes(want)) opts.unshift(want);
-  sel.innerHTML = '';
-  opts.forEach(id => {
-    const o = document.createElement('option');
-    o.value = id; o.textContent = id;
-    sel.appendChild(o);
-  });
-  sel.value = opts.includes(want) && want ? want : opts[0] || '';
-  localStorage.setItem('vd-ai-model', sel.value);
-}
-async function fetchModels(){
-  const provider = $('ai-provider').value, key = $('ai-key').value.trim();
-  const status = $('models-status');
-  if (provider === 'none'){ fillModels([]); status.textContent = ''; return; }
-  if (!key){
-    fillModels(FALLBACK_MODELS[provider] || []);
-    status.textContent = 'Liste par défaut — entrez votre clé puis ⟳ pour la liste complète.';
-    return;
-  }
-  status.textContent = 'Chargement des modèles…';
-  try {
-    let ids = [];
-    if (provider === 'anthropic'){
-      const r = await fetch('https://api.anthropic.com/v1/models?limit=100', {
-        headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01',
-                   'anthropic-dangerous-direct-browser-access': 'true' } });
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      ids = (await r.json()).data.map(m => m.id);
-    } else {
-      const r = await fetch(provider === 'openrouter' ? 'https://openrouter.ai/api/v1/models' : 'https://api.openai.com/v1/models', {
-        headers: { 'Authorization': 'Bearer ' + key } });
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      ids = (await r.json()).data
-        .filter(m => provider !== 'openrouter' || !m.architecture?.output_modalities || m.architecture.output_modalities.includes('text'))
-        .map(m => m.id)
-        .filter(id => provider === 'openrouter' || /^(gpt-|o\d|chatgpt)/.test(id)
-          && !/(audio|realtime|search|transcribe|tts|embed|image|moderation|instruct)/.test(id))
-        .sort().reverse();
-    }
-    if (!ids.length) throw new Error('liste vide');
-    fillModels(ids);
-    status.textContent = ids.length + ' modèles disponibles.';
-  } catch (e) {
-    fillModels(FALLBACK_MODELS[provider] || []);
-    status.textContent = 'Liste par défaut (API : ' + e.message + ').';
-  }
-}
-$('btn-models').addEventListener('click', e => { e.preventDefault(); fetchModels(); });
-$('ai-provider').addEventListener('change', () => {
-  fillModels(FALLBACK_MODELS[$('ai-provider').value] || [],
-             (FALLBACK_MODELS[$('ai-provider').value] || [])[0]);
-  fetchModels();
-});
-$('ai-key').addEventListener('change', fetchModels);
-fetchModels();
-
-/* ─────────── voix par langue (synchronisées avec le sélecteur) ─────────── */
-const VOICE_CHOICES = {
-  fr: [['fr-FR-HenriNeural','Henri (h)'],['fr-FR-DeniseNeural','Denise (f)'],
-       ['fr-FR-RemyMultilingualNeural','Rémy (h · multilingue)'],['fr-FR-VivienneMultilingualNeural','Vivienne (f · multilingue)']],
-  en: [['en-US-AndrewNeural','Andrew (m)'],['en-US-AriaNeural','Aria (f)'],
-       ['en-US-ChristopherNeural','Christopher (m)'],['en-GB-RyanNeural','Ryan (GB · m)'],['en-GB-SoniaNeural','Sonia (GB · f)']],
-  es: [['es-ES-AlvaroNeural','Álvaro (h)'],['es-ES-ElviraNeural','Elvira (f)'],['es-MX-JorgeNeural','Jorge (MX · h)']],
-  de: [['de-DE-ConradNeural','Conrad (m)'],['de-DE-KatjaNeural','Katja (w)']],
-  it: [['it-IT-DiegoNeural','Diego (u)'],['it-IT-ElsaNeural','Elsa (d)']],
-  pt: [['pt-BR-AntonioNeural','Antônio (h)'],['pt-BR-FranciscaNeural','Francisca (f)']],
-};
-function fillVoices(){
-  const sel = $('set-voice'), keep = sel.value;
-  sel.innerHTML = '';
-  const auto = document.createElement('option');
-  auto.value = ''; auto.textContent = 'Auto (selon langue)';
-  sel.appendChild(auto);
-  (VOICE_CHOICES[$('set-lang').value] || []).forEach(([v, label]) => {
-    const o = document.createElement('option');
-    o.value = v; o.textContent = label;
-    sel.appendChild(o);
-  });
-  if ([...sel.options].some(o => o.value === keep)) sel.value = keep;
-}
-$('set-lang').addEventListener('change', fillVoices);
-fillVoices();
-
-/* ─────────── les réglages de l'étape 1 sont IMPOSÉS au projet généré ───────────
-   (même si l'IA dévie : style, langue, durée et voix font foi) */
-function enforceSettings(p){
-  p.meta = p.meta || {}; p.theme = p.theme || {};
-  p.audio = p.audio || {}; p.target = p.target || {};
-  p.meta.lang = $('set-lang').value;
-  p.theme.preset = $('set-theme').value;
-  p.target.duration = parseFloat($('set-duration').value) || 120;
-  const v = $('set-voice').value;
-  if (v) p.audio.voice = v; else delete p.audio.voice;
-  return p;
-}
-
-/* ═══════════════════ source material ═══════════════════ */
-$('btn-load-json').addEventListener('click', () => $('file-input').click());
-$('file-input').addEventListener('change', e => {
-  const f = e.target.files[0];
-  if (!f) return;
-  f.text().then(t => { $('src-material').value = t; });
-});
-$('btn-load-example').addEventListener('click', () => {
-  fetch('examples/helios-leaks.json').then(r => r.json()).then(p => {
-    applyProject(p);
-    setStep(2);
-  }).catch(() => alert('Ouvrez le studio via le serveur local pour charger l’exemple (python3 pipeline/server.py).'));
-});
-function setStep(n){
-  document.querySelector(`.step-btn[data-step="${n}"]`).click();
-}
-
-/* ═══════════════════ scenario generation ═══════════════════ */
-const SCHEMA_DOC = `Tu écris un scénario de vidéo documentaire de crise (style "cold open
-documentaire"). Réponds UNIQUEMENT avec un objet JSON valide, sans markdown, au schéma :
-{
- "meta": {"title": str, "slug": str-kebab, "lang": str},
- "theme": {"preset": "wavestone"|"cyber-dark"},
- "audio": {"rate": "+8%"},
- "target": {"duration": number_secondes},
- "pacing": {"lead":0.8,"gap":0.55,"tail":1.6},
- "scenes": [ 6 à 9 scènes, chacune {"id":"s1"..., "type":..., "vo": "texte voix off", ...} ]
-}
-Types de scènes et leurs champs propres :
-- "cold-open": eyebrow, dateLine (ex "27.06.2017"), kicker (citation/accroche courte),
-  title (NOM COURT EN CAPITALES), subtitle, titleAt (sec, moment où le titre apparaît, ~70% de la VO)
-- "chain": eyebrow, heading, nodes:[{date,title,sub,at?}] (3-5 jalons chronologiques)
-- "map-focus": eyebrow, heading, camera:{center:[lon,lat],scale:18-40}, epicenter:[lon,lat],
-  impactAt (sec), dotAnchors:[[lon,lat]...] (villes touchées), stat:{value:number,suffix?},
-  statAt, statLabel, bullets:[{text,at?}]
-- "map-spread": eyebrow, heading, origin:[lon,lat], stamps:[{name,fig,coords:[lon,lat],at?}] (4-5),
-  bottom:{text,strong}
-- "map-trace": eyebrow, heading, trail:[{coords:[lon,lat],label,at?}] (piste d'enquête),
-  big, bigAt, sub, strip (2 lignes \\n), footer (phrase choc en italique)
-- "stat-grid": eyebrow, heading, facts:[{tag,big,sub,at?,counter?:{to,suffix}}] (4 max, big court)
-- "lessons": eyebrow, lessons:[{text,at?}] (3 leçons), finalLine1, finalLine2 (chute), finalAt
-- "image": src (laisser ""), eyebrow, caption — seulement si l'utilisateur fournira des photos
-- "endcard": vo:"", minDuration:4.2, title, subtitle, brand
-Règles : la VO totale doit tenir dans la durée cible moins ~10% (débit ≈15 caractères/s).
-Chaque scène : 2-4 phrases de VO, percutantes, rythmées. Les textes à l'écran sont COURTS.
-Les cues "at" (secondes depuis le début de la VO de la scène) synchronisent l'écran sur la voix.
-coords = [longitude, latitude]. Dramaturgie : accroche → montée → bascule → conséquences → leçons → chute.`;
-
-async function callAI(systemPrompt, userPrompt){
-  const provider = $('ai-provider').value, key = $('ai-key').value.trim(), model = $('ai-model').value.trim();
-  if (!key) throw new Error('Renseignez une clé API (ou utilisez le gabarit sans IA).');
-  if (provider === 'anthropic'){
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': key,
-                 'anthropic-version': '2023-06-01',
-                 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model, max_tokens: 8000,
-        system: systemPrompt, messages: [{ role: 'user', content: userPrompt }] }),
-    });
-    if (!r.ok) throw new Error('Anthropic ' + r.status + ' : ' + (await r.text()).slice(0, 300));
-    const d = await r.json();
-    return d.content.map(c => c.text || '').join('');
-  } else {
-    const isOpenRouter = provider === 'openrouter';
-    const r = await fetch(isOpenRouter ? 'https://openrouter.ai/api/v1/chat/completions' : 'https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key, ...(isOpenRouter ? { 'HTTP-Referer': location.origin, 'X-OpenRouter-Title': 'VideoMaker' } : {}) },
-      body: JSON.stringify({ model, response_format: { type: 'json_object' },
-        messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }] }),
-    });
-    if (!r.ok) throw new Error((isOpenRouter ? 'OpenRouter ' : 'OpenAI ') + r.status + ' : ' + (await r.text()).slice(0, 300));
-    const d = await r.json();
-    return d.choices[0].message.content;
-  }
-}
-
-$('btn-generate').addEventListener('click', async () => {
-  const src = $('src-material').value.trim();
-  if (!src) return alert('Collez d’abord la matière première (timeline ou texte).');
-  if ($('ai-provider').value === 'none') return $('btn-skeleton').click();
-  $('gen-status').textContent = 'Génération en cours…';
-  $('btn-generate').disabled = true;
-  try {
-    const user = `Matière première :\n${src.slice(0, 24000)}\n\nContraintes :
-- durée cible : ${$('set-duration').value}s — langue : ${$('set-lang').value}
-- ton : ${$('set-tone').value} — public : ${$('set-audience').value}
-- theme.preset : ${$('set-theme').value}${$('set-voice').value ? '\n- audio.voice : ' + $('set-voice').value : ''}`;
-    const raw = await callAI(SCHEMA_DOC, user);
-    const json = raw.replace(/^```json?\s*/m, '').replace(/```\s*$/m, '');
-    const p = JSON.parse(json.slice(json.indexOf('{'), json.lastIndexOf('}') + 1));
-    applyProject(enforceSettings(p));
-    $('gen-status').innerHTML = '<span class="badge">Scénario généré</span> — passez à l’adaptation.';
-    setStep(2);
-  } catch (e) {
-    $('gen-status').innerHTML = '<span class="badge warn">Erreur</span> ' + e.message;
-  } finally {
-    $('btn-generate').disabled = false;
-  }
-});
-
-/* deterministic skeleton from a CrisisDebrifier-style timeline (no AI) */
-$('btn-skeleton').addEventListener('click', () => {
-  let events = [];
-  try {
-    const m = $('src-material').value.match(/\[[\s\S]*\]/);
-    if (m) events = JSON.parse(m[0]);
-  } catch (e) {}
-  const lang = $('set-lang').value;
-  const L = lang === 'fr';
-  const sevSort = (a,b) => (b.severity||0) - (a.severity||0);
-  const phases = [...new Set(events.map(e => e.phase))];
-  const pre = events.filter(e => e.phase === phases[0]).slice(0, 5);
-  const main = events.filter(e => e.phase === phases[1] || phases.length < 2).sort(sevSort);
-  const last = events.filter(e => e.phase === phases[2]).sort(sevSort);
-  const big = main[0] || events[0] || {};
-  const todo = L ? '[À RÉDIGER] ' : '[TO WRITE] ';
-  const p = {
-    meta: { title: big.title || 'Crise', slug: 'ma-video', lang },
-    theme: { preset: $('set-theme').value },
-    audio: Object.assign({ rate: '+6%' }, $('set-voice').value ? { voice: $('set-voice').value } : {}),
-    target: { duration: parseFloat($('set-duration').value) || 120 },
-    pacing: { lead: 0.8, gap: 0.55, tail: 1.6 },
-    scenes: [
-      { id:'s1', type:'cold-open', vo: todo + (big.headline||''),
-        eyebrow:'', dateLine: big.dateLabel || '', kicker: big.headline || '',
-        title:(big.title||'CRISE').toUpperCase().slice(0,18), subtitle:'' },
-      { id:'s2', type:'chain', vo: todo + pre.map(e=>e.headline).join(' '),
-        eyebrow: L?'Acte I':'Act I', heading:'',
-        nodes: pre.map(e => ({ date: e.dateLabel||'', title:(e.title||'').slice(0,28), sub:(e.headline||'').slice(0,70) })) },
-      { id:'s3', type:'map-focus', vo: todo + (big.body||'').slice(0,180),
-        eyebrow:(L?'Acte II — ':'Act II — ')+(big.dateLabel||''), heading:(big.title||'').slice(0,30),
-        camera:{ center: big.coords ? [big.coords[1], big.coords[0]] : [10,47], scale:22 },
-        epicenter: big.coords ? [big.coords[1], big.coords[0]] : [10,47], impactAt:1.5,
-        dotAnchors: main.filter(e=>e.coords).slice(0,8).map(e=>[e.coords[1],e.coords[0]]),
-        stat:{ value:0 }, statLabel:(big.casualties||''), bullets: main.slice(1,5).map(e=>({text:(e.title||'').slice(0,40)})) },
-      { id:'s4', type:'map-spread', vo: todo,
-        eyebrow:L?'Acte II — propagation':'Act II — spread', heading:'',
-        origin: big.coords ? [big.coords[1], big.coords[0]] : [10,47],
-        stamps: main.slice(0,5).filter(e=>e.coords).map(e=>({ name:(e.title||'').toUpperCase().slice(0,16),
-          fig:(e.damageUSD||e.casualties||'').slice(0,42), coords:[e.coords[1],e.coords[0]] })),
-        bottom:{ text:'', strong:'' } },
-      { id:'s5', type:'stat-grid', vo: todo + last.map(e=>e.headline).join(' ').slice(0,200),
-        eyebrow:L?'Acte III — les suites':'Act III — fallout', heading:'',
-        facts: last.slice(0,4).map(e=>({ tag:(e.kind||''), big:(e.title||'').slice(0,26), sub:(e.headline||'').slice(0,70) })) },
-      { id:'s6', type:'lessons', vo: todo,
-        eyebrow:L?'Ce que ça signifie pour le comex':'What this means for the board',
-        lessons:[{text:L?'Leçon 1 — à rédiger.':'Lesson 1 — to write.'},
-                 {text:L?'Leçon 2 — à rédiger.':'Lesson 2 — to write.'},
-                 {text:L?'Leçon 3 — à rédiger.':'Lesson 3 — to write.'}],
-        finalLine1:'', finalLine2:'' },
-      { id:'s7', type:'endcard', vo:'', minDuration:4.2,
-        title:(big.title||'').toUpperCase().slice(0,18), subtitle:'', brand:'' },
-    ],
-  };
-  applyProject(enforceSettings(p));
-  $('gen-status').innerHTML = '<span class="badge">Gabarit créé</span> — rédigez les VO marquées '+todo;
-  setStep(2);
-});
-
-/* ═══════════════════ step 2 : editor ═══════════════════ */
-function applyProject(p){
-  project = p;
-  $('p-title').value = (p.meta && p.meta.title) || '';
-  $('p-theme').value = (p.theme && p.theme.preset) || 'wavestone';
-  $('json-editor').value = JSON.stringify(p, null, 2);
-  renderSceneCards();
-  pushProject();
-}
-function commit(){
-  $('json-editor').value = JSON.stringify(project, null, 2);
-  renderSceneCards();
-  pushProject();
-}
-$('p-title').addEventListener('input', () => { if (project){ project.meta.title = $('p-title').value; commitJsonOnly(); pushProject(); } });
-$('p-theme').addEventListener('change', () => { if (project){ project.theme.preset = $('p-theme').value; commitJsonOnly(); pushProject(); } });
-function commitJsonOnly(){ $('json-editor').value = JSON.stringify(project, null, 2); }
-
-const CPS = { fr: 15.0, en: 14.2, es: 14.5, de: 13.5, it: 14.5, pt: 14.5 };
-function estDur(s){ return s.vo ? Math.max(3, s.vo.length / (CPS[(project.meta||{}).lang] || 14.5)) : (s.minDuration || 3); }
-function updateDurBadge(){
-  if (!project) return;
-  const target = (project.target && project.target.duration) || 120;
-  const b = $('dur-badge');
-  b.textContent = `≈ ${Math.round(totalDur)}s / cible ${target}s`;
-  b.className = 'badge' + (totalDur > target + 4 ? ' warn' : '');
-}
-
-const TYPE_FIELDS = {
-  'cold-open': ['eyebrow','dateLine','kicker','title','subtitle'],
-  'chain': ['eyebrow','heading'],
-  'map-focus': ['eyebrow','heading','statLabel'],
-  'map-spread': ['eyebrow','heading'],
-  'map-trace': ['eyebrow','heading','big','sub','strip','footer'],
-  'stat-grid': ['eyebrow','heading'],
-  'lessons': ['eyebrow','finalLine1','finalLine2'],
-  'image': ['eyebrow','caption'],
-  'endcard': ['title','subtitle','brand'],
-};
-const open = new Set();
-function renderSceneCards(){
-  const host = $('scene-list');
-  host.innerHTML = '';
-  (project.scenes || []).forEach((s, i) => {
-    const card = document.createElement('div');
-    card.className = 'scene-card';
-    const head = document.createElement('header');
-    head.innerHTML = `<span class="scene-type">${s.type}</span>
-      <span class="scene-title">${s.heading || s.title || s.id}</span>
-      <span class="scene-dur">${estDur(s).toFixed(0)}s</span>`;
-    const up = document.createElement('button'); up.className = 'mini-btn'; up.textContent = '▲';
-    const down = document.createElement('button'); down.className = 'mini-btn'; down.textContent = '▼';
-    const del = document.createElement('button'); del.className = 'mini-btn'; del.textContent = '✕';
-    up.onclick = e => { e.stopPropagation(); if (i>0){ const a=project.scenes; [a[i-1],a[i]]=[a[i],a[i-1]]; commit(); } };
-    down.onclick = e => { e.stopPropagation(); const a=project.scenes; if (i<a.length-1){ [a[i+1],a[i]]=[a[i],a[i+1]]; commit(); } };
-    del.onclick = e => { e.stopPropagation(); if (confirm('Supprimer la scène ?')){ project.scenes.splice(i,1); commit(); } };
-    head.append(up, down, del);
-    head.onclick = () => { open.has(s.id) ? open.delete(s.id) : open.add(s.id); renderSceneCards(); };
-    card.appendChild(head);
-    if (open.has(s.id)){
-      const body = document.createElement('div');
-      body.className = 'scene-body';
-      const voF = document.createElement('div');
-      voF.className = 'field';
-      voF.innerHTML = `<label>Voix off</label>`;
-      const ta = document.createElement('textarea'); ta.rows = 3; ta.value = s.vo || '';
-      ta.oninput = () => { s.vo = ta.value; commitJsonOnly(); pushProject(); };
-      voF.appendChild(ta); body.appendChild(voF);
-      (TYPE_FIELDS[s.type] || []).forEach(f => {
-        const d = document.createElement('div'); d.className = 'field';
-        d.innerHTML = `<label>${f}</label>`;
-        const inp = document.createElement('input'); inp.type = 'text'; inp.value = s[f] || '';
-        inp.oninput = () => { s[f] = inp.value; commitJsonOnly(); pushProject(); };
-        d.appendChild(inp); body.appendChild(d);
-      });
-      if (s.type === 'image'){
-        const d = document.createElement('div'); d.className = 'field';
-        d.innerHTML = `<label>Photo (intégrée au projet)</label>`;
-        const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
-        inp.onchange = () => {
-          const f = inp.files[0]; if (!f) return;
-          const rd = new FileReader();
-          rd.onload = () => { s.src = rd.result; commitJsonOnly(); pushProject(); };
-          rd.readAsDataURL(f);
-        };
-        d.appendChild(inp); body.appendChild(d);
-      }
-      const goto = document.createElement('button');
-      goto.className = 'btn'; goto.textContent = '⌖ Voir cette scène';
-      goto.onclick = () => {
-        const idx = project.scenes.indexOf(s);
-        let t = 0.8;
-        for (let k = 0; k < idx; k++) t += estDur(project.scenes[k]) + 0.55;
-        playing = false; $('btn-play').textContent = '▶';
-        seekPreview(t + estDur(s) * 0.55);
-      };
-      body.appendChild(goto);
-      card.appendChild(body);
-    }
-    host.appendChild(card);
-  });
-}
-$('btn-add-scene').addEventListener('click', () => {
-  if (!project) return;
-  const type = prompt('Type de scène : cold-open, chain, map-focus, map-spread, map-trace, stat-grid, lessons, image, endcard', 'image');
-  if (!type || !TYPE_FIELDS[type]) return;
-  const id = 's' + (project.scenes.length + 1) + '_' + Math.random().toString(36).slice(2,5);
-  const s = { id, type, vo: '' };
-  if (type === 'image'){ s.src = ''; s.caption = ''; s.eyebrow = ''; }
-  if (type === 'endcard'){ s.minDuration = 4.2; }
-  project.scenes.push(s);
-  open.add(id);
-  commit();
-});
-$('btn-apply-json').addEventListener('click', () => {
-  try { applyProject(JSON.parse($('json-editor').value)); }
-  catch (e) { alert('JSON invalide : ' + e.message); }
-});
-function download(){
-  if (!project) return alert('Pas de projet.');
-  const blob = new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = ((project.meta && project.meta.slug) || 'projet-video') + '.json';
-  a.click();
-}
-$('btn-download').addEventListener('click', download);
-$('btn-download2').addEventListener('click', download);
-
-/* ═══════════════════ step 3 : production ═══════════════════ */
-async function checkServer(){
-  try {
-    const r = await fetch(SERVER + '/status', { signal: AbortSignal.timeout(1500) });
-    serverOn = (await r.json()).ok;
-  } catch (e) { serverOn = false; }
-  $('server-dot').classList.toggle('on', serverOn);
-  $('server-label').textContent = 'serveur local : ' + (serverOn ? 'connecté' : 'hors ligne');
-  $('prod-server-ok').style.display = serverOn ? 'block' : 'none';
-  $('prod-server-no').style.display = serverOn ? 'none' : 'block';
-}
-setInterval(checkServer, 4000); checkServer();
-
-let polling = null;
-$('btn-produce').addEventListener('click', async () => {
-  if (!project) return alert('Pas de projet.');
-  $('btn-produce').disabled = true;
-  $('prod-log').style.display = 'block';
-  $('prod-done').style.display = 'none';
-  const r = await fetch(SERVER + '/build', { method: 'POST', body: JSON.stringify(project) });
-  if (!r.ok){ $('prod-stage').textContent = 'Erreur : ' + (await r.text()); $('btn-produce').disabled = false; return; }
-  polling = setInterval(async () => {
-    const p = await (await fetch(SERVER + '/progress')).json();
-    $('prod-bar').style.width = (p.pct || 0) + '%';
-    $('prod-stage').textContent = p.stage || '';
-    $('prod-log').textContent = (p.log || []).join('\n');
-    $('prod-log').scrollTop = 1e9;
-    if (p.done){
-      clearInterval(polling); $('btn-produce').disabled = false;
-      if (p.error){ $('prod-stage').textContent = 'Échec — voir le journal.'; $('prod-log').textContent += '\n' + p.error; }
-      else {
-        $('prod-stage').textContent = 'Vidéo prête !';
-        $('prod-done').style.display = 'block';
-        $('prod-link').href = SERVER + '/video';
-        $('prod-link').download = ((project.meta && project.meta.slug) || 'video') + '.mp4';
-      }
-    }
-  }, 1200);
-});
-
-
-/* ═══════════════ production cloud (GitHub Actions) ═══════════════ */
-['gh-repo','gh-token'].forEach(id => {
-  const saved = localStorage.getItem('vd-' + id);
-  if (saved) $(id).value = saved;
-  $(id).addEventListener('change', () => localStorage.setItem('vd-' + id, $(id).value));
-});
-async function gh(path, opts = {}){
-  const tok = $('gh-token').value.trim();
-  const r = await fetch('https://api.github.com' + path, Object.assign({}, opts, {
-    headers: Object.assign({ 'Authorization': 'Bearer ' + tok,
-      'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' }, opts.headers || {}),
-  }));
-  if (!r.ok) throw new Error('GitHub ' + r.status + ' — ' + (await r.text()).slice(0, 200));
-  return r.json();
-}
-let ghPoll = null;
-$('btn-gh-produce').addEventListener('click', async () => {
-  if (!project) return alert('Pas de projet.');
-  const repo = $('gh-repo').value.trim();
-  if (!repo.includes('/')) return alert('Repo au format owner/nom.');
-  if (!$('gh-token').value.trim()) return alert('Renseignez un token GitHub (fine-grained PAT).');
-  const btn = $('btn-gh-produce'); btn.disabled = true;
-  $('gh-done').style.display = 'none';
-  const stage = $('gh-stage');
-  try {
-    stage.textContent = 'Envoi du projet…';
-    const slug = (project.meta && project.meta.slug) || 'video';
-    const path = `requests/${slug}-${Date.now()}.json`;
-    const content = btoa(unescape(encodeURIComponent(JSON.stringify(project, null, 2))));
-    const put = await gh(`/repos/${repo}/contents/${encodeURIComponent(path)}`, { method: 'PUT',
-      body: JSON.stringify({ message: 'studio: production ' + slug, content }) });
-    const sha = put.commit.sha;
-    stage.textContent = 'Projet poussé — démarrage du workflow…';
-    const t0 = Date.now();
-    if (ghPoll) clearInterval(ghPoll);
-    ghPoll = setInterval(async () => {
-      try {
-        const runs = await gh(`/repos/${repo}/actions/runs?head_sha=${sha}`);
-        const run = (runs.workflow_runs || [])[0];
-        const mins = ((Date.now() - t0) / 60000).toFixed(1);
-        if (!run){ stage.textContent = `En attente du workflow… (${mins} min)`; return; }
-        $('gh-run-link').href = run.html_url;
-        if (run.status !== 'completed'){
-          stage.textContent = `Production ${run.status === 'queued' ? 'en file d’attente' : 'en cours'}… (${mins} min — comptez ~12)`;
-          return;
-        }
-        clearInterval(ghPoll); btn.disabled = false;
-        if (run.conclusion !== 'success'){
-          stage.textContent = 'Échec du workflow (' + run.conclusion + ') — ouvrez le run pour le détail.';
-          $('gh-link').style.display = 'none';
-          $('gh-done').style.display = 'block';
-          return;
-        }
-        stage.textContent = 'Vidéo prête !';
-        let href = run.html_url;
-        try {
-          const rel = await gh(`/repos/${repo}/releases/tags/videos`);
-          const asset = (rel.assets || []).filter(a => a.name.startsWith(slug))
-            .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))[0];
-          if (asset) href = asset.browser_download_url;
-        } catch (e) {}
-        $('gh-link').style.display = 'inline-block';
-        $('gh-link').href = href;
-        $('gh-done').style.display = 'block';
-      } catch (e) { stage.textContent = 'Erreur : ' + e.message; }
-    }, 6000);
-  } catch (e) {
-    stage.textContent = 'Erreur : ' + e.message;
-    btn.disabled = false;
-  }
-});
-
-/* boot */
-fitPreview();
-</script>
+  <!-- The page's own API (AI, voice, GitHub) is an ES module, loaded before the app needs it. -->
+  <script>
+    window.VM = window.VM || {};
+    window.VM.apiReady = import('./js/videomaker/api.js?v=20261012-1');
+  </script>
+  <script type="module" src="js/videomaker/settings-ui.js?v=20261012-1"></script>
+  <script src="js/videomaker/icons.js?v=20261012-1"></script>
+  <script src="js/videomaker/engine.js?v=20261012-1"></script>
+  <script src="js/videomaker/engine-product.js?v=20261012-1"></script>
+  <script src="js/videomaker/engine-launch.js?v=20261012-1"></script>
+  <script src="js/videomaker/engine-showcase.js?v=20261012-1"></script>
+  <script src="js/videomaker/clips.js?v=20261012-1"></script>
+  <script src="js/videomaker/audio.js?v=20261012-1"></script>
+  <script src="js/videomaker/mp4.js?v=20261012-1"></script>
+  <script src="js/videomaker/export.js?v=20261012-1"></script>
+  <script src="js/videomaker/documents.js?v=20261012-1"></script>
+  <script src="js/videomaker/app.js?v=20261012-1"></script>
 </body>
 </html>

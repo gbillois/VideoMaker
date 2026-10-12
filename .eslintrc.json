@@ -1,0 +1,14 @@
+{
+  "root": true,
+  "extends": ["eslint:recommended"],
+  "env": { "browser": true, "es2022": true },
+  "parserOptions": { "ecmaVersion": 2022, "sourceType": "script" },
+  "rules": { "no-unused-vars": "off", "no-redeclare": "off" },
+  "overrides": [
+    {
+      "files": ["js/videomaker/api.js", "js/videomaker/settings-ui.js", "js/videomaker/lib/**/*.js"],
+      "parserOptions": { "sourceType": "module" }
+    }
+  ],
+  "ignorePatterns": ["js/vendor/", "node_modules/", "tests/"]
+}

@@ -1,91 +1,59 @@
-# VideoMaker — générateur de vidéos documentaires de crise
+# Video Maker
 
-Un studio HTML qui transforme une timeline de crise (ou n'importe quel récit)
-en **vidéo documentaire 1080p de ~2 minutes** : voix off neurale, musique
-originale synthétisée, scènes animées (cartes, statistiques, leçons, photos).
+Turns a brief, documents (PDF, PowerPoint, Word) or a GitHub repository into narrated videos, one MP4 per language (English, French, German). An AI writes the script, a voice speaks it, and the film is drawn and encoded in the browser (Canvas, WebCodecs, an in-browser MP4 muxer).
 
-**Philosophie : le moins d'IA possible.** L'IA (Claude ou OpenAI, votre clé,
-stockée uniquement dans votre navigateur) ne sert qu'à rédiger le *brouillon*
-de scénario — étape même optionnelle (gabarit déterministe). Toute la
-production (voix, images, musique, montage) est déterministe, en local ou
-sur GitHub Actions.
+It is a **static page with no server**. You bring your own API keys, as in CrisisMaker: they go straight from the page to your providers, stay in the browser tab (session storage) and are never saved in project files. Nothing to install, no account to create besides your own provider accounts.
 
-## Utiliser le studio
+## What it does
 
-**En ligne (GitHub Pages)** : https://gbillois.github.io/VideoMaker/
+1. **Content**: a source box (text, documents, a GitHub repository), pictures (drop, paste, upload) and a brief (purpose, name, length, languages, look, rhythm).
+2. **Edit**: timeline, live preview and an inspector for the selected scene and the whole film (look, format, voice, music, captions).
+3. **Export**: one MP4 per language, plus the project as a JSON file you can save and reopen.
 
-**En local** :
+Pictures can be GIFs or short video clips (MP4 or WebM, 6 seconds and 8 MB at most, three per project). A clip plays in a loop inside the scene that shows it, and the Start and Length fields on its card cut another window out of the original file.
+
+Four looks render the same project: Slides, Product (the default), Showcase and Launch.
+
+## AI settings (top right)
+
+| | Options | You need |
+| --- | --- | --- |
+| **Script writer** | Claude (Anthropic), OpenAI, OpenRouter, a local OpenAI-compatible server (Ollama's `/v1`, LM Studio, llama.cpp) | an API key (none for a local server) and a model; **Refresh** lists the models your key can use |
+| **Voice-over** | Azure Speech (Microsoft neural voices) or OpenAI voices | the voice provider's key (Azure: and its region, for example `westeurope`) |
+
+Without a voice key the film plays and exports with music and captions only.
+
+Claude is called with `anthropic-dangerous-direct-browser-access`, which is how Anthropic allows calls made from a web page with the user's own key. A local server must allow requests from the page (for Ollama: `OLLAMA_ORIGINS=*` or the page's origin).
+
+Not available without a server: reading a web page by its address and capturing a URL as a picture. Paste the text, or upload a screenshot, instead.
+
+## Run it
+
 ```sh
-cd pipeline
-python3 server.py            # → http://localhost:8765/studio
-```
-Pré-requis locaux : `brew install ffmpeg node` (ou apt), `pip3 install edge-tts numpy scipy`.
-
-## Les 3 étapes
-
-1. **Scénario** — collez votre matière première (timeline JSON, notes,
-   compte-rendu) ; réglez durée, langue, ton, public, style, voix. Générez
-   par IA (sélecteur de modèles dynamique) ou par gabarit sans IA.
-2. **Adaptation** — éditez chaque scène (voix off, textes, photos),
-   réordonnez ; l'aperçu live (scrubber + lecture) utilise le *même moteur*
-   que le rendu final.
-3. **Production** — trois modes :
-   - **Cloud GitHub** *(recommandé)* : le studio pousse le projet dans
-     `requests/`, le workflow [produce-video](.github/workflows/produce-video.yml)
-     fabrique le MP4 (~12 min) et le publie dans la release
-     [`videos`](../../releases/tag/videos). Il vous faut un *fine-grained PAT*
-     du repo avec **Contents read/write** et **Actions read**.
-   - **Serveur local** : un clic, progression en direct.
-   - **Ligne de commande** : `python3 pipeline/build.py mon-projet.json`.
-
-On peut aussi lancer une production à la main : onglet *Actions* →
-*produce-video* → *Run workflow* avec un chemin de projet (ex.
-`examples/notpetya.json`).
-
-## Schéma d'un projet
-
-```jsonc
-{
-  "meta":   { "title", "slug", "lang" },          // lang: fr en es de it pt
-  "theme":  { "preset": "wavestone" | "cyber-dark", "overrides": { … } },
-  "audio":  { "voice": "fr-FR-DeniseNeural", "rate": "+6%",
-              "musicLevel": -8.5, "voGain": 7 },  // voice optionnelle (auto)
-  "target": { "duration": 120 },                  // auto-ajustement du débit
-  "pacing": { "lead": 0.8, "gap": 0.55, "tail": 1.6, "fps": 24 },
-  "scenes": [ /* types ci-dessous */ ]
-}
+npm start        # http://localhost:8080 (a dependency-free static server)
 ```
 
-### Types de scènes
+Any static file server does the same job: the page is `index.html` and its folders, with relative paths.
 
-| Type | Usage | Champs propres |
-|------|-------|----------------|
-| `cold-open` | accroche (date, citation, titre glitché) | `dateLine, kicker, title, titleSize?, titleAt?, subtitle` |
-| `chain` | chronologie à jalons (3-5 nœuds) | `heading, nodes:[{date,title,sub,at?}]` |
-| `map-focus` | carte régionale + statistique + liste | `camera:{center:[lon,lat],scale}, epicenter, impactAt?, dotAnchors, stat:{value,suffix?}, statAt?, statLabel, bullets` |
-| `map-spread` | carte monde + arcs + estampilles | `origin, stamps:[{name,fig,coords,at?}], bottom:{text,strong}` |
-| `map-trace` | piste d'enquête (points reliés) | `trail:[{coords,label,dx?,dy?,at?}], big, bigAt?, sub, strip, footer` |
-| `stat-grid` | grille 2×2 de faits/chiffres | `facts:[{tag,big,sub,at?,counter?:{to,suffix}}]` |
-| `lessons` | leçons numérotées + chute | `lessons:[{text,at?}], finalLine1, finalLine2, finalAt?` |
-| `image` | photo plein écran (Ken Burns) + légende | `src` (dataURL via le studio), `caption, kenburns?` |
-| `endcard` | carton de fin (sans VO) | `title, subtitle, brand, minDuration` |
+## Publish it
 
-Champs communs : `id`, `type`, `vo` (voix off), `eyebrow`, `mood` (musique :
-`dark tension impact grim hope cold resolve`, défaut intelligent par type).
-Cues `at` en secondes depuis le début de la VO de la scène (réparties
-uniformément si absentes). `coords` = `[longitude, latitude]`.
+GitHub Pages: repository **Settings > Pages**, source **Deploy from a branch**, branch `main`, folder `/ (root)`. The site is then at `https://<user>.github.io/VideoMaker/`. Any other static host works the same way (Netlify, an S3 bucket, a company web server).
 
-## Arborescence
+## Develop
+
+```sh
+npm install
+npm run verify   # ESLint and the Vitest tests (mocked fetch: no key, no network)
+```
 
 ```
-├── index.html            ← le studio (GitHub Pages / server.py)
-├── engine/scene.html     ← moteur de rendu déterministe (aperçu ET rendu final)
-├── pipeline/
-│   ├── build.py          ← VO → timing → frames → musique → mix → MP4
-│   ├── server.py         ← serveur local (production en un clic)
-│   ├── render.js         ← capture Playwright 1080p24
-│   └── make_music.py     ← musique paramétrique par moods (synthèse pure)
-├── examples/             ← notpetya.json (EN) · helios-leaks.json (FR, fictif)
-├── requests/             ← projets poussés par le studio (déclenche le workflow)
-└── .github/workflows/produce-video.yml
+index.html           the page (and its Content Security Policy)
+css/  js/  assets/   styles, scripts, logos and fonts
+js/videomaker/       the app: engines, audio, export, documents, clips
+js/videomaker/lib/   ES modules: AI providers, script writer, GitHub, voices, settings
+js/vendor/pdfjs/     pdf.js (Apache-2.0), reads PDF files in the browser
+tests/               Vitest tests
+docs/SPECS.md        flow, modules, hosting
 ```
+
+The page is a 3-step SPA. Its "API" (`js/videomaker/api.js`) answers the page with real `Response` objects, so every step that used to be a server call now runs in the browser.

@@ -1,0 +1,17 @@
+{
+  "name": "videomaker",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Video Maker: turns a brief, documents or a GitHub repository into narrated MP4 videos, in the browser, with your own API keys.",
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "lint": "eslint 'js/videomaker/**/*.js'",
+    "test": "vitest run",
+    "verify": "npm run lint && npm test"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.1",
+    "vitest": "^3.2.7"
+  }
+}
